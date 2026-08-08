@@ -1,0 +1,2087 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بازار اکانت‌ها - دیوار اکانت</title>
+    <link rel="manifest" href="/manifest.json">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Tahoma', 'Vazir', sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            padding-bottom: 100px;
+        }
+        a {
+            text-decoration: none;
+        }
+
+        /* ===== صفحه اسپلش ===== */
+        .splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #ff6b35, #ff2e00);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            flex-direction: column;
+            transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+
+        .splash-screen.hide {
+            opacity: 0;
+            transform: scale(1.1);
+            pointer-events: none;
+        }
+
+        .splash-logo {
+            font-size: 80px;
+            color: white;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .splash-title {
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+            margin-top: 15px;
+            letter-spacing: 2px;
+        }
+
+        .splash-sub {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 16px;
+            margin-top: 8px;
+        }
+
+        .splash-loader {
+            margin-top: 30px;
+            width: 60px;
+            height: 60px;
+            border: 5px solid rgba(255, 255, 255, 0.2);
+            border-top: 5px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* ===== وضعیت اینترنت ===== */
+        .offline-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: #d32f2f;
+            color: white;
+            text-align: center;
+            padding: 10px;
+            font-weight: bold;
+            z-index: 9999;
+            display: none;
+            font-size: 14px;
+        }
+        .offline-banner i {
+            margin-left: 8px;
+        }
+        .offline-banner.show {
+            display: block;
+            animation: slideDown 0.5s ease;
+        }
+
+        .online-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: #2e7d32;
+            color: white;
+            text-align: center;
+            padding: 10px;
+            font-weight: bold;
+            z-index: 9999;
+            display: none;
+            font-size: 14px;
+        }
+        .online-banner.show {
+            display: block;
+            animation: slideDown 0.5s ease;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ff6b35, #ff2e00);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(255, 43, 0, 0.3);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header h1 {
+            font-size: 28px;
+        }
+        .header h1 i {
+            margin-left: 10px;
+        }
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .stats span {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 13px;
+        }
+        .stats i {
+            margin-left: 5px;
+        }
+
+        .tabs-section {
+            background: white;
+            padding: 10px;
+            margin: 10px 10px 0;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: 0.3s;
+            background: #f0f0f0;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tab-btn:hover {
+            background: #e0e0e0;
+        }
+        .tab-btn.active {
+            background: #ff6b35;
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+        }
+        .tab-btn i {
+            font-size: 16px;
+        }
+        .tab-btn .tab-badge {
+            background: #e91e63;
+            color: white;
+            border-radius: 50%;
+            padding: 0 8px;
+            font-size: 11px;
+            line-height: 20px;
+            min-width: 20px;
+            text-align: center;
+        }
+        .tab-btn.active .tab-badge {
+            background: white;
+            color: #e91e63;
+        }
+
+        .filter-section {
+            background: white;
+            padding: 15px;
+            margin: 10px 10px 15px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+        .filter-btn {
+            padding: 8px 20px;
+            border: 2px solid #eee;
+            border-radius: 25px;
+            background: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+            font-size: 14px;
+        }
+        .filter-btn:hover {
+            border-color: #ff6b35;
+            color: #ff6b35;
+        }
+        .filter-btn.active {
+            background: #ff6b35;
+            color: white;
+            border-color: #ff6b35;
+        }
+        .filter-btn i {
+            margin-left: 6px;
+        }
+
+        .favorites-btn {
+            padding: 8px 18px;
+            border: 2px solid #e91e63;
+            border-radius: 25px;
+            background: white;
+            color: #e91e63;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .favorites-btn:hover {
+            background: #e91e63;
+            color: white;
+        }
+        .favorites-btn.active {
+            background: #e91e63;
+            color: white;
+        }
+        .favorites-btn .badge-count {
+            background: #e91e63;
+            color: white;
+            border-radius: 50%;
+            padding: 0 8px;
+            font-size: 12px;
+            line-height: 20px;
+            min-width: 20px;
+            text-align: center;
+        }
+        .favorites-btn.active .badge-count {
+            background: white;
+            color: #e91e63;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 10px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 18px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            border-right: 6px solid #ff6b35;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+        }
+        .card .game-icon {
+            font-size: 28px;
+            margin-left: 10px;
+        }
+        .card .title {
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .card .badge {
+            background: #ff6b35;
+            color: white;
+            font-size: 11px;
+            padding: 2px 12px;
+            border-radius: 20px;
+            margin-right: 10px;
+        }
+        .card .badge.verified {
+            background: #2e7d32;
+        }
+        .card .badge.sold {
+            background: #888;
+        }
+        .card .badge.rent {
+            background: #9c27b0;
+        }
+        .card .badge.rent-available {
+            background: #0288d1;
+        }
+        .card .details {
+            margin: 10px 0;
+            color: #555;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+        .card .details i {
+            width: 22px;
+            color: #ff6b35;
+        }
+        .card .price {
+            font-size: 22px;
+            font-weight: bold;
+            color: #2e7d32;
+            margin: 10px 0;
+        }
+        .card .price i {
+            color: #ff6b35;
+            font-size: 18px;
+        }
+        .card .price .rent-price {
+            color: #9c27b0;
+        }
+        .card .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        .card.sold-card {
+            opacity: 0.7;
+            border-right-color: #888;
+            background: #f5f5f5;
+        }
+        .card.sold-card .price {
+            color: #888;
+            text-decoration: line-through;
+        }
+        .card.rent-card {
+            border-right-color: #9c27b0;
+        }
+        .card.rent-card .price {
+            color: #9c27b0;
+        }
+
+        .request-status-card {
+            background: white;
+            border-radius: 16px;
+            padding: 16px 18px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            border-right: 6px solid #ff6b35;
+            transition: 0.3s;
+        }
+        .request-status-card:hover {
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        .request-status-card .r-title {
+            font-weight: bold;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .request-status-card .r-title .type-badge {
+            font-size: 12px;
+            padding: 2px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+        .request-status-card .r-title .type-badge.buy {
+            background: #e3f2fd;
+            color: #0288d1;
+        }
+        .request-status-card .r-title .type-badge.rent {
+            background: #f3e5f5;
+            color: #6a1b9a;
+        }
+        .request-status-card .r-title .type-badge.ad {
+            background: #fff3e0;
+            color: #e65100;
+        }
+        .request-status-card .r-status {
+            font-size: 13px;
+            color: #888;
+            margin-top: 5px;
+        }
+        .request-status-card .r-status .status-badge {
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .request-status-card .r-status .status-badge.pending {
+            background: #fff3e0;
+            color: #e65100;
+        }
+        .request-status-card .r-status .status-badge.approved {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .request-status-card .r-status .status-badge.rejected {
+            background: #fce4ec;
+            color: #c62828;
+        }
+        .request-status-card .r-details {
+            font-size: 13px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .request-status-card .r-details i {
+            width: 20px;
+            color: #888;
+        }
+        .request-status-card .admin-message {
+            margin-top: 8px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            background: #f5f5f5;
+            border-right: 3px solid #ff6b35;
+        }
+        .request-status-card .admin-message.approved {
+            border-right-color: #2e7d32;
+            background: #e8f5e9;
+        }
+        .request-status-card .admin-message.rejected {
+            border-right-color: #c62828;
+            background: #fce4ec;
+        }
+        .request-status-card .admin-message i {
+            margin-left: 5px;
+            color: #ff6b35;
+        }
+        .request-status-card .admin-message.approved i {
+            color: #2e7d32;
+        }
+        .request-status-card .admin-message.rejected i {
+            color: #c62828;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-primary {
+            background: #ff6b35;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #e55a2b;
+            transform: scale(1.02);
+        }
+        .btn-favorite {
+            background: transparent;
+            border: 2px solid #e91e63;
+            color: #e91e63;
+        }
+        .btn-favorite:hover {
+            background: #e91e63;
+            color: white;
+        }
+        .btn-favorite.active {
+            background: #e91e63;
+            color: white;
+        }
+        .btn-success {
+            background: #2e7d32;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #1b5e20;
+        }
+        .btn-rent {
+            background: #9c27b0;
+            color: white;
+        }
+        .btn-rent:hover {
+            background: #6a1b9a;
+            transform: scale(1.02);
+        }
+        .btn-request {
+            background: #0288d1;
+            color: white;
+        }
+        .btn-request:hover {
+            background: #01579b;
+            transform: scale(1.02);
+        }
+        .btn-add-ad {
+            background: linear-gradient(135deg, #6a1b9a, #9c27b0);
+            color: white;
+            box-shadow: 0 4px 15px rgba(106, 27, 154, 0.3);
+        }
+        .btn-add-ad:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 25px rgba(106, 27, 154, 0.4);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 9999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(4px);
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-box {
+            background: white;
+            border-radius: 20px;
+            padding: 30px 25px;
+            max-width: 480px;
+            width: 95%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s ease;
+            text-align: center;
+            border-top: 5px solid #6a1b9a;
+        }
+        .modal-box .close-modal {
+            background: transparent;
+            border: none;
+            color: #999;
+            float: left;
+            font-size: 22px;
+            cursor: pointer;
+            margin-top: -8px;
+        }
+        .modal-box .close-modal:hover {
+            color: #333;
+        }
+        .modal-box .modal-icon {
+            font-size: 50px;
+            margin: 5px 0 10px;
+        }
+        .modal-box h3 {
+            color: #333;
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+        .modal-box .modal-sub {
+            color: #888;
+            font-size: 13px;
+            margin-bottom: 15px;
+        }
+        .modal-box .ad-form {
+            text-align: right;
+        }
+        .modal-box .ad-form label {
+            font-size: 13px;
+            font-weight: bold;
+            color: #555;
+            display: block;
+            margin-top: 12px;
+            margin-bottom: 4px;
+        }
+        .modal-box .ad-form label .required {
+            color: #d32f2f;
+        }
+        .modal-box .ad-form input,
+        .modal-box .ad-form select,
+        .modal-box .ad-form textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #eee;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: 0.3s;
+            font-family: inherit;
+        }
+        .modal-box .ad-form input:focus,
+        .modal-box .ad-form select:focus,
+        .modal-box .ad-form textarea:focus {
+            border-color: #9c27b0;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(156, 39, 176, 0.15);
+        }
+        .modal-box .ad-form textarea {
+            min-height: 60px;
+            resize: vertical;
+        }
+        .modal-box .ad-form .radio-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            padding: 5px 0;
+        }
+        .modal-box .ad-form .radio-group label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: normal;
+            margin: 0;
+            cursor: pointer;
+            color: #555;
+            font-size: 14px;
+        }
+        .modal-box .ad-form .radio-group input[type="radio"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #9c27b0;
+            cursor: pointer;
+        }
+        .modal-box .ad-form .btn-submit {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            justify-content: center;
+            margin-top: 15px;
+            background: linear-gradient(135deg, #6a1b9a, #9c27b0);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .modal-box .ad-form .btn-submit:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 15px rgba(106, 27, 154, 0.3);
+        }
+        .modal-box .ad-note {
+            font-size: 12px;
+            color: #888;
+            margin-top: 15px;
+            border-top: 1px solid #eee;
+            padding-top: 12px;
+            text-align: center;
+        }
+        .modal-box .ad-note .highlight {
+            color: #6a1b9a;
+            font-weight: bold;
+        }
+
+        /* ===== مودال تماس (برای خرید/اجاره و پشتیبانی) ===== */
+        .contact-modal-box {
+            border-top: 5px solid #ff6b35;
+            max-width: 500px;
+            text-align: center;
+        }
+        .contact-modal-box .contact-icon {
+            font-size: 60px;
+            color: #ff6b35;
+            margin-bottom: 10px;
+        }
+        .contact-modal-box .contact-title {
+            color: #333;
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .contact-modal-box .contact-desc {
+            color: #666;
+            font-size: 15px;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+        .contact-modal-box .contact-desc .highlight {
+            color: #ff6b35;
+            font-weight: bold;
+        }
+        .contact-modal-box .contact-links {
+            background: #f9f9f9;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 15px 0;
+            text-align: right;
+        }
+        .contact-modal-box .contact-links .link-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .contact-modal-box .contact-links .link-item:last-child {
+            border-bottom: none;
+        }
+        .contact-modal-box .contact-links .link-item i {
+            font-size: 22px;
+            width: 30px;
+            text-align: center;
+        }
+        .contact-modal-box .contact-links .link-item .link-label {
+            font-weight: bold;
+            color: #555;
+            font-size: 14px;
+            min-width: 60px;
+        }
+        .contact-modal-box .contact-links .link-item a {
+            color: #ff6b35;
+            font-weight: bold;
+            text-decoration: none;
+            transition: 0.3s;
+            font-size: 14px;
+            word-break: break-all;
+        }
+        .contact-modal-box .contact-links .link-item a:hover {
+            color: #e55a2b;
+            text-decoration: underline;
+        }
+        .contact-modal-box .contact-note {
+            font-size: 13px;
+            color: #999;
+            margin: 15px 0;
+            background: #fff3ed;
+            padding: 10px 15px;
+            border-radius: 10px;
+            border-right: 4px solid #ff6b35;
+        }
+        .contact-modal-box .contact-note i {
+            color: #ff6b35;
+            margin-left: 6px;
+        }
+        .contact-modal-box .btn-contact-close {
+            background: #ff6b35;
+            color: white;
+            border: none;
+            padding: 12px 40px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-top: 10px;
+        }
+        .contact-modal-box .btn-contact-close:hover {
+            background: #e55a2b;
+            transform: scale(1.02);
+        }
+        .contact-modal-box .contact-support {
+            background: #f0f8ff;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 15px 0;
+            border-right: 4px solid #0288d1;
+            text-align: right;
+        }
+        .contact-modal-box .contact-support .support-title {
+            font-weight: bold;
+            color: #0288d1;
+            font-size: 16px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .contact-modal-box .contact-support .support-title i {
+            font-size: 20px;
+        }
+        .contact-modal-box .contact-support p {
+            color: #555;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .contact-modal-box .contact-support .support-links .link-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .contact-modal-box .contact-support .support-links .link-item:last-child {
+            border-bottom: none;
+        }
+        .contact-modal-box .contact-support .support-links .link-item i {
+            font-size: 20px;
+            width: 30px;
+            text-align: center;
+        }
+        .contact-modal-box .contact-support .support-links .link-item .link-label {
+            font-weight: bold;
+            color: #555;
+            font-size: 13px;
+            min-width: 70px;
+        }
+        .contact-modal-box .contact-support .support-links .link-item a {
+            color: #0288d1;
+            font-weight: bold;
+            text-decoration: none;
+            transition: 0.3s;
+            font-size: 14px;
+        }
+        .contact-modal-box .contact-support .support-links .link-item a:hover {
+            color: #01579b;
+            text-decoration: underline;
+        }
+        .contact-modal-box .contact-support .support-links .link-item .direct-contact {
+            color: #333;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        /* ===== دکمه شناور پشتیبانی ===== */
+        .floating-support {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 999;
+        }
+        .support-toggle {
+            background: #ff6b35;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 14px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(255, 43, 0, 0.4);
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .support-toggle:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 28px rgba(255, 43, 0, 0.5);
+        }
+        .support-toggle i {
+            font-size: 20px;
+        }
+
+        .floating-add-ad {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            z-index: 997;
+        }
+        .floating-add-ad .add-toggle {
+            background: linear-gradient(135deg, #6a1b9a, #9c27b0);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 18px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 6px 25px rgba(106, 27, 154, 0.4);
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .floating-add-ad .add-toggle:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 35px rgba(106, 27, 154, 0.6);
+        }
+        .floating-add-ad .add-toggle i {
+            font-size: 18px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 20px 10px 10px;
+            padding: 10px 15px;
+            background: white;
+            border-radius: 12px;
+            border-right: 6px solid #888;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #333;
+        }
+        .section-title i {
+            color: #888;
+        }
+        .section-title .count {
+            background: #888;
+            color: white;
+            padding: 0 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            line-height: 28px;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px 20px 10px;
+            color: #888;
+            font-size: 13px;
+            border-top: 1px solid #ddd;
+            margin-top: 20px;
+        }
+        .footer a {
+            color: #ff6b35;
+        }
+
+        .about-section {
+            max-width: 800px;
+            margin: 0 auto 15px;
+            background: white;
+            border-radius: 16px;
+            padding: 20px 25px;
+            text-align: right;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+            border-right: 6px solid #ff6b35;
+        }
+        .about-section h3 {
+            color: #ff6b35;
+            font-size: 18px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .about-section h3 i {
+            font-size: 20px;
+        }
+        .about-section p {
+            color: #555;
+            font-size: 14px;
+            line-height: 2;
+            margin-bottom: 8px;
+        }
+        .about-section .highlight {
+            background: #fff3ed;
+            padding: 12px 15px;
+            border-radius: 10px;
+            border-right: 4px solid #ff6b35;
+            margin: 10px 0;
+        }
+        .about-section .highlight i {
+            color: #ff6b35;
+            margin-left: 6px;
+        }
+        .about-section .warning {
+            background: #fff8e1;
+            padding: 12px 15px;
+            border-radius: 10px;
+            border-right: 4px solid #f9a825;
+            margin: 10px 0;
+        }
+        .about-section .warning i {
+            color: #f9a825;
+            margin-left: 6px;
+        }
+        .about-section .success-box {
+            background: #e8f5e9;
+            padding: 12px 15px;
+            border-radius: 10px;
+            border-right: 4px solid #2e7d32;
+            margin: 10px 0;
+        }
+        .about-section .success-box i {
+            color: #2e7d32;
+            margin-left: 6px;
+        }
+        .about-section .danger-box {
+            background: #fce4ec;
+            padding: 12px 15px;
+            border-radius: 10px;
+            border-right: 4px solid #d32f2f;
+            margin: 10px 0;
+        }
+        .about-section .danger-box i {
+            color: #d32f2f;
+            margin-left: 6px;
+        }
+        .about-section .info-box {
+            background: #e3f2fd;
+            padding: 12px 15px;
+            border-radius: 10px;
+            border-right: 4px solid #0288d1;
+            margin: 10px 0;
+        }
+        .about-section .info-box i {
+            color: #0288d1;
+            margin-left: 6px;
+        }
+        .about-section .footer-links {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .about-section .footer-links a {
+            color: #ff6b35;
+            font-size: 13px;
+        }
+        .about-section .footer-links a:hover {
+            text-decoration: underline;
+        }
+
+        .empty-favorites {
+            text-align: center;
+            padding: 50px 20px;
+            color: #999;
+            display: none;
+        }
+        .empty-favorites i {
+            font-size: 50px;
+            color: #ddd;
+            margin-bottom: 15px;
+        }
+        .empty-favorites p {
+            font-size: 16px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        .status-filter-section {
+            background: white;
+            padding: 12px 15px;
+            margin: 0 10px 15px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+        .status-filter-btn {
+            padding: 6px 16px;
+            border: 2px solid #eee;
+            border-radius: 20px;
+            background: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+            font-size: 13px;
+        }
+        .status-filter-btn:hover {
+            border-color: #ff6b35;
+            color: #ff6b35;
+        }
+        .status-filter-btn.active {
+            background: #ff6b35;
+            color: white;
+            border-color: #ff6b35;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 20px;
+            }
+            .stats {
+                gap: 10px;
+                font-size: 12px;
+            }
+            .filter-btn {
+                font-size: 12px;
+                padding: 6px 14px;
+            }
+            .favorites-btn {
+                font-size: 12px;
+                padding: 6px 14px;
+            }
+            .card .title {
+                font-size: 16px;
+            }
+            .card .price {
+                font-size: 18px;
+            }
+            .floating-support {
+                right: 10px;
+                bottom: 10px;
+            }
+            .support-toggle {
+                font-size: 14px;
+                padding: 12px 16px;
+            }
+            .support-toggle span {
+                display: none;
+            }
+            .support-toggle i {
+                font-size: 22px;
+            }
+            .floating-add-ad {
+                right: 10px;
+                bottom: 75px;
+            }
+            .floating-add-ad .add-toggle {
+                font-size: 12px;
+                padding: 10px 14px;
+            }
+            .floating-add-ad .add-toggle span {
+                display: none;
+            }
+            .floating-add-ad .add-toggle i {
+                font-size: 18px;
+            }
+            .about-section {
+                padding: 15px;
+                margin: 0 10px 15px;
+            }
+            .about-section p {
+                font-size: 13px;
+            }
+            .section-title {
+                font-size: 16px;
+                margin: 15px 5px 10px;
+            }
+            .modal-box {
+                padding: 20px;
+            }
+            .tab-btn {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+            .tab-btn i {
+                font-size: 13px;
+            }
+            .tabs-section {
+                gap: 3px;
+                padding: 8px;
+            }
+            .request-status-card {
+                padding: 14px;
+            }
+            .request-status-card .r-title {
+                font-size: 14px;
+            }
+            .status-filter-btn {
+                font-size: 12px;
+                padding: 4px 12px;
+            }
+            .modal-box .ad-form .radio-group {
+                flex-direction: column;
+                gap: 5px;
+            }
+            .contact-modal-box .contact-links .link-item {
+                flex-wrap: wrap;
+                gap: 5px;
+            }
+            .contact-modal-box .contact-links .link-item .link-label {
+                min-width: auto;
+                font-size: 13px;
+            }
+            .contact-modal-box .contact-links .link-item a {
+                font-size: 13px;
+            }
+            .contact-modal-box .contact-support .support-links .link-item {
+                flex-wrap: wrap;
+                gap: 5px;
+            }
+            .contact-modal-box .contact-support .support-links .link-item .link-label {
+                min-width: auto;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ===== وضعیت اینترنت ===== -->
+    <div class="offline-banner" id="offlineBanner">
+        <i class="fas fa-wifi"></i> قطعی اینترنت! لطفاً اتصال خود را بررسی کنید.
+    </div>
+    <div class="online-banner" id="onlineBanner">
+        <i class="fas fa-check-circle"></i> اتصال اینترنت برقرار شد!
+    </div>
+
+    <!-- ===== صفحه اسپلش ===== -->
+    <div class="splash-screen" id="splashScreen">
+        <div class="splash-logo">
+            <i class="fas fa-store"></i>
+        </div>
+        <div class="splash-title">بازار اکانت‌ها</div>
+        <div class="splash-sub">⭐ معتبرترین پلتفرم خرید و فروش اکانت بازی</div>
+        <div class="splash-loader"></div>
+    </div>
+
+    <!-- ===== مودال ثبت آگهی ===== -->
+    <div class="modal-overlay" id="addAdModal">
+        <div class="modal-box" style="border-top-color:#6a1b9a;">
+            <button class="close-modal" onclick="closeAddAdModal()"><i class="fas fa-times"></i></button>
+            <div class="modal-icon" style="color:#9c27b0;"><i class="fas fa-plus-circle"></i></div>
+            <h3 style="color:#6a1b9a;">ثبت آگهی جدید</h3>
+            <p class="modal-sub">اطلاعات اکانت خود را به دقت وارد کنید</p>
+
+            <form class="ad-form" id="addAdForm" onsubmit="return false;">
+                <label>نوع اکانت (چه اکانتی هست) <span class="required">*</span></label>
+                <input type="text" id="adType" placeholder="مثال: اکانت کالاف دیوتی موبایل - لگندری" required>
+
+                <label>شماره تلفن همراه <span class="required">*</span></label>
+                <input type="text" id="adPhone" placeholder="مثال: ۰۹۱۲۳۴۵۶۷۸۹" required>
+
+                <label>اطلاعات اکانت <span class="required">*</span></label>
+                <textarea id="adInfo" placeholder="مشخصات اکانت را وارد کنید (اسکین‌ها، رنک، الماس و...)" required></textarea>
+
+                <label>ایمیل (اختیاری)</label>
+                <input type="email" id="adEmail" placeholder="مثال: user@gmail.com">
+
+                <label>قیمت (تومان) <span class="required">*</span></label>
+                <input type="number" id="adPrice" placeholder="مثال: 2500000" required>
+
+                <label>نوع آگهی <span class="required">*</span></label>
+                <div class="radio-group">
+                    <label><input type="radio" name="adType" value="sale" checked> فروش مستقیم</label>
+                    <label><input type="radio" name="adType" value="rent"> اجاره‌ای</label>
+                </div>
+
+                <button type="button" class="btn-submit" onclick="submitAd()">
+                    <i class="fas fa-paper-plane"></i> ثبت آگهی
+                </button>
+            </form>
+
+            <p class="ad-note">
+                <i class="fas fa-info-circle" style="color:#9c27b0;"></i>
+                هزینه ثبت آگهی <span class="highlight">هر ۱ ماه ۱۰,۰۰۰ تومان</span> می‌باشد که پس از تایید اطلاعات اولیه به شما پیام داده خواهد شد.
+            </p>
+        </div>
+    </div>
+
+    <!-- ===== مودال تماس (برای خرید/اجاره و پشتیبانی) ===== -->
+    <div class="modal-overlay" id="contactModal">
+        <div class="modal-box contact-modal-box">
+            <button class="close-modal" onclick="closeContactModal()"><i class="fas fa-times"></i></button>
+            <div class="contact-icon">
+                <i class="fas fa-headset"></i>
+            </div>
+            <div class="contact-title">📢 برای خرید/اجاره این اکانت</div>
+            <div class="contact-desc">
+                باید از طریق کانال‌های <span class="highlight">روبیکا</span> و <span class="highlight">تلگرام</span> با ما در ارتباط باشید.<br>
+                <span style="color:#999;font-size:14px;">در نسخه بعدی برطرف خواهد شد</span>
+            </div>
+
+            <div class="contact-links">
+                <div class="link-item">
+                    <i class="fas fa-comment" style="color:#9c27b0;"></i>
+                    <span class="link-label">🟣 روبیکا:</span>
+                    <a href="https://rubika.ir/HIOP_lp" target="_blank">@HIOP_lp</a>
+                </div>
+                <div class="link-item">
+                    <i class="fab fa-telegram" style="color:#0088cc;"></i>
+                    <span class="link-label">💬 تلگرام:</span>
+                    <a href="https://t.me/AMIRGGGGGGz" target="_blank">@AMIRGGGGGGz</a>
+                </div>
+            </div>
+
+            <!-- ===== بخش پشتیبانی ===== -->
+            <div class="contact-support">
+                <div class="support-title">
+                    <i class="fas fa-shield-alt"></i> 🛡️ پشتیبانی
+                </div>
+                <p>لطفا برای پشتیبانی به کانال‌ها به آیدی زیر مراجعه کنید</p>
+                <div class="support-links">
+                    <div class="link-item">
+                        <i class="fas fa-comment" style="color:#9c27b0;"></i>
+                        <span class="link-label">🟣 روبیکا:</span>
+                        <a href="https://rubika.ir/HIOP_lp" target="_blank">@HIOP_lp</a>
+                    </div>
+                    <div class="link-item">
+                        <i class="fab fa-telegram" style="color:#0088cc;"></i>
+                        <span class="link-label">💬 تلگرام:</span>
+                        <a href="https://t.me/AMIRGGGGGGz" target="_blank">@AMIRGGGGGGz</a>
+                    </div>
+                    <div class="link-item" style="border-bottom:none;">
+                        <i class="fas fa-phone" style="color:#ff6b35;"></i>
+                        <span class="link-label">📞 ارتباط مستقیم:</span>
+                        <span class="direct-contact">@HIOP_lp</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="contact-note">
+                <i class="fas fa-shield-alt"></i>
+                با کلیک روی لینک‌ها به صفحه رسمی ما در روبیکا و تلگرام هدایت می‌شوید.
+            </div>
+
+            <button class="btn-contact-close" onclick="closeContactModal()">
+                <i class="fas fa-check"></i> متوجه شدم
+            </button>
+        </div>
+    </div>
+
+    <!-- ===== مودال پشتیبانی (برای دکمه شناور) ===== -->
+    <div class="modal-overlay" id="supportModal">
+        <div class="modal-box contact-modal-box" style="border-top-color:#0288d1;">
+            <button class="close-modal" onclick="closeSupportModal()"><i class="fas fa-times"></i></button>
+            <div class="contact-icon" style="color:#0288d1;">
+                <i class="fas fa-headset"></i>
+            </div>
+            <div class="contact-title" style="color:#0288d1;">🛡️ پشتیبانی</div>
+            <div class="contact-desc">
+                برای پشتیبانی به آیدی‌های زیر مراجعه کنید
+            </div>
+
+            <div class="contact-support" style="border-right-color:#0288d1; background:#f0f8ff;">
+                <div class="support-links">
+                    <div class="link-item">
+                        <i class="fas fa-comment" style="color:#9c27b0;"></i>
+                        <span class="link-label">🟣 روبیکا:</span>
+                        <a href="https://rubika.ir/HIOP_lp" target="_blank">@HIOP_lp</a>
+                    </div>
+                    <div class="link-item">
+                        <i class="fab fa-telegram" style="color:#0088cc;"></i>
+                        <span class="link-label">💬 تلگرام:</span>
+                        <a href="https://t.me/AMIRGGGGGGz" target="_blank">@AMIRGGGGGGz</a>
+                    </div>
+                    <div class="link-item" style="border-bottom:none;">
+                        <i class="fas fa-phone" style="color:#ff6b35;"></i>
+                        <span class="link-label">📞 ارتباط مستقیم:</span>
+                        <span class="direct-contact">@HIOP_lp</span>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-contact-close" onclick="closeSupportModal()" style="background:#0288d1;">
+                <i class="fas fa-check"></i> متوجه شدم
+            </button>
+        </div>
+    </div>
+
+    <!-- ===== هدر ===== -->
+    <header class="header">
+        <h1><i class="fas fa-store"></i> بازار اکانت‌ها</h1>
+        <p>⭐ معتبرترین پلتفرم خرید و فروش اکانت بازی</p>
+        <div class="stats">
+            <span><i class="fas fa-gamepad"></i> <span id="totalAds">۰</span> اکانت</span>
+            <span><i class="fas fa-user-check"></i> ۳,۸۵۰ عضو</span>
+            <span><i class="fas fa-clock"></i> <span id="todayAds">۰</span> آگهی امروز</span>
+        </div>
+    </header>
+
+    <!-- ===== تب‌ها ===== -->
+    <div class="tabs-section">
+        <button class="tab-btn active" data-tab="buy" onclick="switchTab('buy')">
+            <i class="fas fa-shopping-cart"></i> خرید اکانت
+        </button>
+        <button class="tab-btn" data-tab="rent" onclick="switchTab('rent')">
+            <i class="fas fa-calendar-alt"></i> اجاره اکانت
+        </button>
+        <button class="tab-btn" data-tab="status" onclick="switchTab('status')">
+            <i class="fas fa-clipboard-list"></i> وضعیت درخواست‌ها
+            <span class="tab-badge" id="statusBadge">0</span>
+        </button>
+    </div>
+
+    <!-- ===== بخش خرید ===== -->
+    <div class="tab-content active" id="tab-buy">
+        <div class="filter-section">
+            <button class="filter-btn active" data-game="all" data-tab="buy"><i class="fas fa-th-large"></i> همه</button>
+            <button class="filter-btn" data-game="callofduty" data-tab="buy"><i class="fas fa-crosshairs"></i> کالاف</button>
+            <button class="filter-btn" data-game="freefire" data-tab="buy"><i class="fas fa-fire"></i> فری فایر</button>
+            <button class="filter-btn" data-game="pubg" data-tab="buy"><i class="fas fa-helmet-safety"></i> پابجی</button>
+            <button class="filter-btn" data-game="valorant" data-tab="buy"><i class="fas fa-skull"></i> والورانت</button>
+
+            <button class="favorites-btn" id="favoritesToggle" onclick="toggleFavorites()">
+                <i class="fas fa-heart"></i>
+                <span>علاقه‌مندی</span>
+                <span class="badge-count" id="favCount">0</span>
+            </button>
+        </div>
+        <div class="container" id="buyAdsContainer"></div>
+    </div>
+
+    <!-- ===== بخش اجاره ===== -->
+    <div class="tab-content" id="tab-rent">
+        <div class="filter-section">
+            <button class="filter-btn active" data-game="all" data-tab="rent"><i class="fas fa-th-large"></i> همه</button>
+            <button class="filter-btn" data-game="callofduty" data-tab="rent"><i class="fas fa-crosshairs"></i> کالاف</button>
+            <button class="filter-btn" data-game="freefire" data-tab="rent"><i class="fas fa-fire"></i> فری فایر</button>
+            <button class="filter-btn" data-game="pubg" data-tab="rent"><i class="fas fa-helmet-safety"></i> پابجی</button>
+            <button class="filter-btn" data-game="valorant" data-tab="rent"><i class="fas fa-skull"></i> والورانت</button>
+        </div>
+        <div class="container" id="rentAdsContainer"></div>
+    </div>
+
+    <!-- ===== بخش وضعیت درخواست‌ها ===== -->
+    <div class="tab-content" id="tab-status">
+        <div class="status-filter-section">
+            <button class="status-filter-btn active" data-filter="all" onclick="filterStatus('all')">همه</button>
+            <button class="status-filter-btn" data-filter="pending" onclick="filterStatus('pending')">در انتظار</button>
+            <button class="status-filter-btn" data-filter="approved" onclick="filterStatus('approved')">تایید شده</button>
+            <button class="status-filter-btn" data-filter="rejected" onclick="filterStatus('rejected')">رد شده</button>
+        </div>
+        <div class="container" id="statusContainer"></div>
+    </div>
+
+    <!-- ===== فروخته شده ===== -->
+    <div class="container">
+        <div class="section-title">
+            <i class="fas fa-check-circle"></i>
+            <span>اکانت‌های فروخته شده</span>
+            <span class="count" id="soldCount">0</span>
+        </div>
+        <div id="soldAdsList"></div>
+    </div>
+
+    <!-- ===== خالی بودن علاقه‌مندی ===== -->
+    <div class="container">
+        <div class="empty-favorites" id="emptyFavorites">
+            <i class="fas fa-heart" style="color:#e91e63;"></i>
+            <p>شما هنوز هیچ اکانتی را به علاقه‌مندی‌ها اضافه نکرده‌اید</p>
+            <p style="font-size:13px; color:#bbb;">روی قلب قرمز زیر هر اکانت کلیک کنید</p>
+        </div>
+    </div>
+
+    <!-- ===== دکمه شناور ثبت آگهی ===== -->
+    <div class="floating-add-ad">
+        <button class="add-toggle" onclick="openAddAdModal()">
+            <i class="fas fa-plus-circle"></i>
+            <span>ثبت آگهی</span>
+        </button>
+    </div>
+
+    <!-- ===== دکمه شناور پشتیبانی ===== -->
+    <div class="floating-support">
+        <button class="support-toggle" onclick="openSupportModal()">
+            <i class="fas fa-headset"></i>
+            <span>پشتیبانی</span>
+        </button>
+    </div>
+
+    <!-- ===== فوتر ===== -->
+    <div class="footer">
+        <div class="about-section">
+            <h3><i class="fas fa-info-circle"></i> درباره ما</h3>
+
+            <p>
+                <strong>بازار اکانت‌ها</strong> یک پلتفرم آگهی‌محور است که فروشندگان و خریداران اکانت‌های بازی را به هم متصل می‌کند. 
+                ما فقط نقش <strong>ویترین</strong> را داریم و هیچ گونه معامله‌ای در این سایت انجام نمی‌شود.
+            </p>
+
+            <div class="highlight">
+                <i class="fas fa-handshake"></i> 
+                <strong>نحوه کار:</strong> فروشنده آگهی را ثبت می‌کند، خریدار شماره تماس را مشاهده کرده و مستقیماً با فروشنده ارتباط برقرار می‌کند.
+            </div>
+
+            <div class="info-box">
+                <i class="fas fa-check-circle"></i> 
+                <strong>معنی تایید شده:</strong><br>
+                <span style="color:#555;">
+                    برچسب <strong style="color:#2e7d32;">"تایید شده"</strong> که در کنار اکانت‌ها قرار دارد، به این معنا است که 
+                    <strong>اکانت از طرف خود سایت تایید شده</strong> و در صورت هرگونه مشکل از جمله 
+                    <strong>بن شدن اکانت</strong>، سایت هزینه اکانت را به شما <strong>تقبل می‌کند</strong>.
+                </span>
+            </div>
+
+            <div class="success-box">
+                <i class="fas fa-plus-circle"></i> 
+                <strong>برای ثبت اکانت خود، از دکمه "ثبت آگهی" استفاده کنید.</strong>
+            </div>
+
+            <div class="success-box" style="background:#e3f2fd; border-right-color:#0288d1;">
+                <i class="fas fa-check-circle" style="color:#0288d1;"></i>
+                <strong style="color:#0288d1;">مزایا ثبت اکانت:</strong><br>
+                <span style="color:#555;">✅ فروش با بهترین سرعت</span>
+            </div>
+
+            <div class="danger-box">
+                <i class="fas fa-exclamation-circle"></i> 
+                <strong>هزینه:</strong><br>
+                <span style="color:#555;">💰 ۱۰,۰۰۰ تومان از فروش اکانت شما به اپلیکیشن تعلق می‌گیرد</span>
+            </div>
+
+            <div class="warning">
+                <i class="fas fa-exclamation-triangle"></i> 
+                <strong>توجه مهم:</strong> 
+                ما در قبال <strong>قیمت‌ها، کیفیت اکانت‌ها، اصالت، کلاهبرداری یا هرگونه مشکل پس از فروش</strong> هیچ مسئولیتی نداریم. 
+                لطفاً پیش از هرگونه پرداخت، از صحت اطلاعات فروشنده کاملاً مطمئن شوید.
+            </div>
+
+            <p style="font-size:13px; color:#999;">
+                <i class="fas fa-check-circle" style="color:#2e7d32;"></i> 
+                تمام آگهی‌ها توسط تیم ما بررسی می‌شوند، اما تأیید آگهی به معنای <strong>تضمین کیفیت یا اصالت</strong> آن نیست.
+            </p>
+
+            <div class="footer-links">
+                <a href="#"><i class="fas fa-gavel"></i> قوانین</a>
+                <a href="#"><i class="fas fa-phone"></i> تماس با ما</a>
+                <a href="#" onclick="openSupportModal(); return false;"><i class="fas fa-headset"></i> پشتیبانی</a>
+            </div>
+        </div>
+
+        <p style="font-size:12px; color:#aaa;">© ۲۰۲۶ بازار اکانت‌ها | تمامی حقوق محفوظ است</p>
+    </div>
+
+    <script>
+        // ===== کلیدهای ذخیره‌سازی =====
+        const STORAGE_KEY = 'marketplace_ads';
+        const RENT_KEY = 'rent_ads';
+        const FAV_KEY = 'favorites';
+        const BUY_REQUESTS_KEY = 'buy_requests';
+        const RENT_REQUESTS_KEY = 'rent_requests';
+        const AD_REQUESTS_KEY = 'ad_requests';
+
+        // ===== صفحه اسپلش =====
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                const splash = document.getElementById('splashScreen');
+                splash.classList.add('hide');
+                setTimeout(function() {
+                    splash.style.display = 'none';
+                }, 800);
+            }, 2000);
+        });
+
+        // ===== اتصال به Supabase =====
+        const SUPABASE_URL = 'https://qmwjedpftyyugqwfhjjv.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_boer2E1n8PD2cZaKLezxCQ_G5naBFYf';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // ===== وضعیت اینترنت =====
+        let isOnline = navigator.onLine;
+
+        function updateOnlineStatus() {
+            const offlineBanner = document.getElementById('offlineBanner');
+            const onlineBanner = document.getElementById('onlineBanner');
+            
+            if (!navigator.onLine) {
+                offlineBanner.classList.add('show');
+                onlineBanner.classList.remove('show');
+                isOnline = false;
+                showToast('⚠️ اتصال اینترنت قطع است! برخی امکانات در دسترس نیست.', 'error');
+            } else {
+                if (!isOnline) {
+                    onlineBanner.classList.add('show');
+                    setTimeout(() => {
+                        onlineBanner.classList.remove('show');
+                    }, 3000);
+                }
+                offlineBanner.classList.remove('show');
+                isOnline = true;
+                loadAdsFromSupabase();
+            }
+        }
+
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+
+        // ===== بارگذاری اکانت‌ها از دیتابیس =====
+        async function loadAdsFromSupabase() {
+            if (!navigator.onLine) {
+                console.log('📡 آفلاین - استفاده از داده‌های محلی');
+                renderAll();
+                return;
+            }
+
+            try {
+                const { data: ads, error: adsError } = await supabaseClient
+                    .from('ads')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (adsError) throw adsError;
+                
+                const { data: rentAds, error: rentError } = await supabaseClient
+                    .from('rent_ads')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (rentError) throw rentError;
+                
+                if (ads) adsData = ads;
+                if (rentAds) rentData = rentAds;
+                
+                renderAll();
+                
+            } catch (error) {
+                console.error('❌ خطا در بارگذاری:', error);
+                showToast('❌ خطا در اتصال به دیتابیس!', 'error');
+                renderAll();
+            }
+        }
+
+        // ===== داده‌های پیش‌فرض =====
+        const DEFAULT_ADS = [
+            { id: '1', game: 'callofduty', icon: '<i class="fas fa-crosshairs" style="color:#ff6b35;"></i>', title: 'اکانت کالاف دیوتی موبایل - لگندری', badge: 'تایید شده', verified: true, details: ['۱۵۰ اسکین افسانه‌ای', 'رنک لگندری ۱۰ بار', 'به همراه ایمیل و بازیابی'], price: '۳,۲۰۰,۰۰۰', phone: '۰۹۱۲۳۴۵۶۷۸۹', rubika: 'kalaf_legend', telegram: 'kalaf_gamer', sold: false },
+            { id: '2', game: 'freefire', icon: '<i class="fas fa-fire" style="color:#ff5722;"></i>', title: 'اکانت فری فایر - کروم ۹۰', badge: 'فوق‌العاده', verified: false, details: ['۲۵,۰۰۰ الماس', '۶۰ شخصیت آنلاک', '۳۰ اسکین اسلحه'], price: '۱,۸۵۰,۰۰۰', phone: '۰۹۳۵۶۷۸۹۰۱۲', rubika: 'ff_chrome90', telegram: 'freefire_god', sold: false },
+            { id: '3', game: 'pubg', icon: '<i class="fas fa-helmet-safety" style="color:#2e7d32;"></i>', title: 'اکانت پابجی موبایل - کانکر ۹', badge: 'VIP', verified: false, details: ['۸۰ اسکین Mythic', 'ربات‌های گلادیاتور', 'ایمیل تایید شده'], price: '۴,۵۰۰,۰۰۰', phone: '۰۹۰۱۲۳۴۵۶۷۸', rubika: 'pubg_conqueror', telegram: 'pubg_pro', sold: false },
+            { id: '4', game: 'valorant', icon: '<i class="fas fa-skull" style="color:#9c27b0;"></i>', title: 'اکانت والورانت - ارور ۱۰۰۰', badge: 'تایید شده', verified: true, details: ['۵۰ اسکین نایاب', 'رنک Radiant', 'تغییر نام رایگان'], price: '۲,۲۰۰,۰۰۰', phone: '۰۹۲۱۲۳۴۵۶۷۸', rubika: 'valorant_radiant', telegram: 'valorant_pro', sold: false }
+        ];
+
+        const DEFAULT_RENT_ADS = [
+            { id: 'r1', game: 'freefire', icon: '<i class="fas fa-fire" style="color:#ff5722;"></i>', title: 'اکانت فری فایر کروم - اجاره‌ای', badge: 'اجاره', verified: true, details: ['۲۵,۰۰۰ الماس', '۶۰ شخصیت آنلاک', 'مناسب برای رنک'], price: '۵۰۰,۰۰۰', rentDuration: '۱ هفته', phone: '۰۹۳۵۶۷۸۹۰۱۲', rubika: 'ff_rent', telegram: 'ff_rent_telegram', sold: false, isRent: true },
+            { id: 'r2', game: 'callofduty', icon: '<i class="fas fa-crosshairs" style="color:#ff6b35;"></i>', title: 'اکانت کالاف دیوتی لگندری - اجاره‌ای', badge: 'اجاره', verified: true, details: ['۱۵۰ اسکین افسانه‌ای', 'رنک لگندری', 'همراه با ایمیل'], price: '۷۵۰,۰۰۰', rentDuration: '۲ هفته', phone: '۰۹۱۲۳۴۵۶۷۸۹', rubika: 'cod_rent', telegram: 'cod_rent_telegram', sold: false, isRent: true }
+        ];
+
+        function loadData(key, defaultData) {
+            const saved = localStorage.getItem(key);
+            if (saved) {
+                try { return JSON.parse(saved); } catch (e) { return defaultData; }
+            }
+            localStorage.setItem(key, JSON.stringify(defaultData));
+            return defaultData;
+        }
+
+        function saveData(key, data) {
+            localStorage.setItem(key, JSON.stringify(data));
+        }
+
+        let adsData = loadData(STORAGE_KEY, DEFAULT_ADS.map(a => ({ ...a, sold: false })));
+        let rentData = loadData(RENT_KEY, DEFAULT_RENT_ADS.map(a => ({ ...a, sold: false })));
+        let favorites = loadData(FAV_KEY, []);
+        let buyRequests = loadData(BUY_REQUESTS_KEY, []);
+        let rentRequests = loadData(RENT_REQUESTS_KEY, []);
+        let adRequests = loadData(AD_REQUESTS_KEY, []);
+
+        let showFavoritesOnly = false;
+        let currentTab = 'buy';
+        let statusFilter = 'all';
+
+        function updateStatusBadge() {
+            const total = buyRequests.filter(r => r.status === 'pending').length +
+                rentRequests.filter(r => r.status === 'pending').length +
+                adRequests.filter(r => r.status === 'pending').length;
+            document.getElementById('statusBadge').textContent = total;
+        }
+
+        // ===== مودال‌ها =====
+        function openContactModal() {
+            document.getElementById('contactModal').classList.add('active');
+        }
+
+        function closeContactModal() {
+            document.getElementById('contactModal').classList.remove('active');
+        }
+
+        function openSupportModal() {
+            document.getElementById('supportModal').classList.add('active');
+        }
+
+        function closeSupportModal() {
+            document.getElementById('supportModal').classList.remove('active');
+        }
+
+        function openAddAdModal() {
+            if (!navigator.onLine) {
+                showToast('❌ برای ثبت آگهی به اینترنت نیاز دارید!', 'error');
+                return;
+            }
+            document.getElementById('addAdModal').classList.add('active');
+        }
+
+        function closeAddAdModal() {
+            document.getElementById('addAdModal').classList.remove('active');
+            document.getElementById('addAdForm').reset();
+        }
+
+        // ===== ثبت آگهی =====
+        async function submitAd() {
+            if (!navigator.onLine) {
+                showToast('❌ برای ثبت آگهی به اینترنت نیاز دارید!', 'error');
+                return;
+            }
+
+            const type = document.getElementById('adType').value.trim();
+            const phone = document.getElementById('adPhone').value.trim();
+            const info = document.getElementById('adInfo').value.trim();
+            const email = document.getElementById('adEmail').value.trim();
+            const price = document.getElementById('adPrice').value.trim();
+            const adTypeRadio = document.querySelector('input[name="adType"]:checked');
+
+            if (!type || !phone || !info || !price) {
+                showToast('❌ لطفاً همه فیلدهای ضروری را پر کنید!', 'error');
+                return;
+            }
+
+            const adType = adTypeRadio ? adTypeRadio.value : 'sale';
+
+            const request = {
+                id: Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
+                type: adType === 'sale' ? 'فروش' : 'اجاره',
+                accountType: type,
+                price: Number(price).toLocaleString(),
+                phone: phone,
+                info: info,
+                email: email || 'ندارد',
+                status: 'pending',
+                adminMessage: '',
+                createdAt: new Date().toLocaleString('fa-IR')
+            };
+
+            console.log('📦 درخواست ارسال به Supabase:', request);
+
+            const { data, error } = await supabaseClient
+                .from('ad_requests')
+                .insert([request])
+                .select();
+
+            if (error) {
+                console.error('❌ خطا:', error);
+                showToast('❌ خطا: ' + error.message, 'error');
+                return;
+            }
+
+            console.log('✅ ذخیره شد:', data);
+            showToast('✅ آگهی شما ثبت شد و منتظر تایید مدیر است!', 'success');
+            closeAddAdModal();
+            
+            const { data: newAdReqs } = await supabaseClient.from('ad_requests').select('*');
+            if (newAdReqs) adRequests = newAdReqs;
+            updateStatusBadge();
+            renderStatus();
+        }
+
+        // ===== باز کردن مودال تماس برای خرید و اجاره =====
+        function openBuyRequest(adId, adTitle) {
+            openContactModal();
+        }
+
+        function openRentRequest(adId, adTitle) {
+            openContactModal();
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-' + tab));
+            if (tab === 'status') renderStatus();
+            else renderAll();
+        }
+
+        function filterStatus(filter) {
+            statusFilter = filter;
+            document.querySelectorAll('.status-filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter ===
+                filter));
+            renderStatus();
+        }
+
+        function renderStatus() {
+            const container = document.getElementById('statusContainer');
+
+            let allRequests = [
+                ...buyRequests.map(r => ({ ...r, typeLabel: 'خرید', typeClass: 'buy', icon: '🛒' })),
+                ...rentRequests.map(r => ({ ...r, typeLabel: 'اجاره', typeClass: 'rent', icon: '📅' })),
+                ...adRequests.map(r => ({ ...r, typeLabel: 'ثبت آگهی', typeClass: 'ad', icon: '📝' }))
+            ];
+
+            if (statusFilter !== 'all') {
+                allRequests = allRequests.filter(r => r.status === statusFilter);
+            }
+
+            allRequests.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+            if (allRequests.length === 0) {
+                container.innerHTML = `
+                            <div style="text-align:center; padding:50px 20px; color:#999;">
+                                <i class="fas fa-clipboard-list fa-3x" style="color:#ddd;"></i>
+                                <p style="margin-top:10px;">هیچ درخواستی با این وضعیت وجود ندارد</p>
+                            </div>
+                        `;
+                return;
+            }
+
+            const statusText = {
+                'pending': 'در انتظار بررسی',
+                'approved': '✅ تایید شده',
+                'rejected': '❌ رد شده'
+            };
+            const statusClass = {
+                'pending': 'pending',
+                'approved': 'approved',
+                'rejected': 'rejected'
+            };
+
+            container.innerHTML = allRequests.map(r => {
+                let detailsHtml = '';
+                if (r.accountType) {
+                    detailsHtml =
+                        `<i class="fas fa-gamepad"></i> ${r.accountType} | <i class="fas fa-phone"></i> ${r.phone}`;
+                    if (r.email && r.email !== 'ندارد') detailsHtml += ` | <i class="fas fa-envelope"></i> ${r.email}`;
+                } else {
+                    detailsHtml =
+                        `<i class="fas fa-user"></i> ${r.name} | <i class="fas fa-phone"></i> ${r.phone} ${r.duration ? `| <i class="fas fa-clock"></i> ${r.duration}` : ''}`;
+                    if (r.telegram && r.telegram !== 'ندارد') detailsHtml += ` | <i class="fab fa-telegram"></i> ${r.telegram}`;
+                    if (r.message && r.message !== 'بدون پیام') detailsHtml += ` | 📝 ${r.message}`;
+                }
+
+                let adminMsgHtml = '';
+                if (r.adminMessage && r.adminMessage.trim() !== '') {
+                    const msgClass = r.status === 'approved' ? 'approved' : (r.status === 'rejected' ? 'rejected' : '');
+                    adminMsgHtml = `
+                                <div class="admin-message ${msgClass}">
+                                    <i class="fas fa-comment-dots"></i>
+                                    <strong>پیام مدیر:</strong> ${r.adminMessage}
+                                </div>
+                            `;
+                }
+
+                return `
+                            <div class="request-status-card">
+                                <div class="r-title">
+                                    <span class="type-badge ${r.typeClass}">${r.icon} ${r.typeLabel}</span>
+                                    ${r.adTitle || r.accountType || 'ثبت آگهی'}
+                                </div>
+                                <div class="r-status">
+                                    وضعیت: <span class="status-badge ${statusClass[r.status]}">${statusText[r.status]}</span>
+                                    <span style="font-size:12px;color:#999;margin-right:10px;">${r.createdAt}</span>
+                                </div>
+                                <div class="r-details">${detailsHtml}</div>
+                                ${adminMsgHtml}
+                            </div>
+                        `;
+            }).join('');
+        }
+
+        function renderAll() {
+            const buyContainer = document.getElementById('buyAdsContainer');
+            const rentContainer = document.getElementById('rentAdsContainer');
+            const soldContainer = document.getElementById('soldAdsList');
+            const soldCount = document.getElementById('soldCount');
+
+            const buyAds = adsData.filter(a => !a.sold);
+            const soldAds = adsData.filter(a => a.sold);
+            const rentAds = rentData.filter(a => !a.sold);
+
+            buyContainer.innerHTML = buyAds.length === 0 ?
+                `<div style="text-align:center;padding:40px;color:#999;"><i class="fas fa-inbox fa-3x" style="color:#ddd;"></i><p style="margin-top:10px;">هیچ اکانت خریدی وجود ندارد</p></div>` :
+                buyAds.map(ad => createBuyCard(ad)).join('');
+
+            rentContainer.innerHTML = rentAds.length === 0 ?
+                `<div style="text-align:center;padding:40px;color:#999;"><i class="fas fa-calendar-alt fa-3x" style="color:#ddd;"></i><p style="margin-top:10px;">هیچ اکانت اجاره‌ای وجود ندارد</p></div>` :
+                rentAds.map(ad => createRentCard(ad)).join('');
+
+            soldContainer.innerHTML = soldAds.length === 0 ?
+                `<div style="text-align:center;padding:20px;color:#bbb;"><i class="fas fa-check-circle" style="color:#ddd;"></i><p style="margin-top:5px;">هنوز اکانتی فروخته نشده است</p></div>` :
+                soldAds.map(ad => createBuyCard(ad, true)).join('');
+
+            soldCount.textContent = soldAds.length;
+            document.getElementById('totalAds').textContent = buyAds.length + rentAds.length;
+            document.getElementById('todayAds').textContent = buyAds.length + rentAds.length;
+
+            updateFavButtons();
+            updateFavCount();
+            applyFilters();
+            updateStatusBadge();
+            
+            if (navigator.onLine) {
+                loadAdsFromSupabase();
+            }
+        }
+
+        // ===== کارت خرید =====
+        function createBuyCard(ad, isSold = false) {
+            const favActive = favorites.includes(ad.id) ? 'active' : '';
+            const favText = favorites.includes(ad.id) ? 'حذف از علاقه‌مندی' : 'علاقه‌مندی';
+            const badge = isSold ? '<span class="badge sold">✓ فروخته شده</span>' :
+                (ad.verified ? `<span class="badge verified">✓ تایید شده</span>` : `<span class="badge">${ad.badge}</span>`);
+            const price = isSold ? `<span style="color:#888;">فروخته شد</span>` : `<i class="fas fa-toman"></i> ${ad.price} تومان`;
+
+            return `
+                    <div class="card ${isSold ? 'sold-card' : ''}" data-game="${ad.game}" data-id="${ad.id}" data-tab="buy">
+                        <div class="title"><span class="game-icon">${ad.icon}</span>${ad.title}${badge}</div>
+                        <div class="details">${ad.details.map(d => `<i class="fas fa-star"></i> ${d}<br>`).join('')}</div>
+                        <div class="price">${price}</div>
+                        <div class="actions">
+                            ${!isSold ? `
+                                    <button class="btn btn-request" onclick="openBuyRequest('${ad.id}','${ad.title}')">
+                                        <i class="fas fa-shopping-cart"></i> درخواست خرید
+                                    </button>
+                                    <button class="btn btn-favorite ${favActive}" onclick="toggleFavorite('${ad.id}')">
+                                        <i class="fas fa-heart"></i> ${favText}
+                                    </button>
+                                ` : `
+                                    <button class="btn btn-success" disabled style="opacity:0.7;cursor:default;">
+                                        <i class="fas fa-check-circle"></i> فروخته شده
+                                    </button>
+                                `}
+                        </div>
+                    </div>
+                `;
+        }
+
+        function createRentCard(ad) {
+            const favActive = favorites.includes(ad.id) ? 'active' : '';
+            const favText = favorites.includes(ad.id) ? 'حذف از علاقه‌مندی' : 'علاقه‌مندی';
+
+            return `
+                    <div class="card rent-card" data-game="${ad.game}" data-id="${ad.id}" data-tab="rent">
+                        <div class="title">
+                            <span class="game-icon">${ad.icon}</span>${ad.title}
+                            <span class="badge rent-available">📅 قابل اجاره</span>
+                            ${ad.verified ? '<span class="badge verified">✓ تایید شده</span>' : ''}
+                        </div>
+                        <div class="details">
+                            ${ad.details.map(d => `<i class="fas fa-star"></i> ${d}<br>`).join('')}
+                            <i class="fas fa-clock" style="color:#9c27b0;"></i> مدت اجاره: <strong>${ad.rentDuration}</strong>
+                        </div>
+                        <div class="price"><span class="rent-price"><i class="fas fa-calendar-alt"></i> ${ad.price} تومان</span></div>
+                        <div class="actions">
+                            <button class="btn btn-rent" onclick="openRentRequest('${ad.id}','${ad.title}')">
+                                <i class="fas fa-calendar-check"></i> درخواست اجاره
+                            </button>
+                            <button class="btn btn-favorite ${favActive}" onclick="toggleFavorite('${ad.id}')">
+                                <i class="fas fa-heart"></i> ${favText}
+                            </button>
+                        </div>
+                    </div>
+                `;
+        }
+
+        function toggleFavorite(id) {
+            favorites = favorites.includes(id) ? favorites.filter(f => f !== id) : [...favorites, id];
+            saveData(FAV_KEY, favorites);
+            renderAll();
+        }
+
+        function updateFavCount() {
+            document.getElementById('favCount').textContent = favorites.length;
+        }
+
+        function updateFavButtons() {
+            document.querySelectorAll('.card .btn-favorite').forEach(btn => {
+                const card = btn.closest('.card');
+                if (!card) return;
+                const id = card.dataset.id;
+                const isFav = favorites.includes(id);
+                btn.classList.toggle('active', isFav);
+                btn.innerHTML = `<i class="fas fa-heart"></i> ${isFav ? 'حذف از علاقه‌مندی' : 'علاقه‌مندی'}`;
+            });
+        }
+
+        function toggleFavorites() {
+            showFavoritesOnly = !showFavoritesOnly;
+            const toggleBtn = document.getElementById('favoritesToggle');
+            if (toggleBtn) toggleBtn.classList.toggle('active', showFavoritesOnly);
+            if (showFavoritesOnly) {
+                document.querySelectorAll('.filter-btn[data-tab="buy"]').forEach(b => b.classList.remove('active'));
+                document.querySelector('.filter-btn[data-tab="buy"][data-game="all"]')?.classList.add('active');
+            }
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const tab = currentTab;
+            const activeBtn = document.querySelector(`.filter-btn[data-tab="${tab}"].active`);
+            const game = activeBtn ? activeBtn.dataset.game : 'all';
+
+            const cards = document.querySelectorAll(`.card[data-tab="${tab}"]`);
+            const emptyMsg = document.getElementById('emptyFavorites');
+
+            let hasVisible = false;
+
+            cards.forEach(card => {
+                let show = true;
+                if (game !== 'all' && card.dataset.game !== game) show = false;
+                if (showFavoritesOnly && tab === 'buy' && !favorites.includes(card.dataset.id)) show = false;
+                card.style.display = show ? 'block' : 'none';
+                if (show) hasVisible = true;
+            });
+
+            emptyMsg.style.display = (showFavoritesOnly && tab === 'buy') ? (hasVisible ? 'none' : 'block') : 'none';
+        }
+
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const tab = this.dataset.tab;
+                if (showFavoritesOnly && tab === 'buy') {
+                    showFavoritesOnly = false;
+                    const toggleBtn = document.getElementById('favoritesToggle');
+                    if (toggleBtn) toggleBtn.classList.remove('active');
+                }
+                document.querySelectorAll(`.filter-btn[data-tab="${tab}"]`).forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                applyFilters();
+            });
+        });
+
+        function showToast(message, type = 'success') {
+            const old = document.querySelector('.custom-toast');
+            if (old) old.remove();
+            const toast = document.createElement('div');
+            toast.className = 'custom-toast';
+            toast.textContent = message;
+            const bgColor = type === 'error' ? '#d32f2f' : type === 'warning' ? '#f9a825' : '#2e7d32';
+            Object.assign(toast.style, {
+                position: 'fixed',
+                top: '70px',
+                right: '20px',
+                background: bgColor,
+                color: 'white',
+                padding: '14px 25px',
+                borderRadius: '12px',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+                zIndex: '9999',
+                animation: 'slideDown 0.4s ease',
+                fontSize: '15px',
+                fontWeight: 'bold',
+                direction: 'rtl',
+                maxWidth: '90%'
+            });
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = '0.4s';
+                setTimeout(() => toast.remove(), 500);
+            }, 4000);
+        }
+
+        document.addEventListener('click', function(e) {
+            document.querySelectorAll('.modal-overlay').forEach(modal => {
+                if (modal.classList.contains('active') && e.target === modal) {
+                    modal.classList.remove('active');
+                }
+            });
+        });
+
+        const style = document.createElement('style');
+        style.textContent =
+            `@keyframes slideDown { from { opacity:0; transform:translateY(-30px); } to { opacity:1; transform:translateY(0); } } .custom-toast { animation: slideDown 0.4s ease; }`;
+        document.head.appendChild(style);
+
+        updateOnlineStatus();
+        renderAll();
+    </script>
+
+</body>
+</html>
